@@ -30,6 +30,7 @@ export function SongCard({
                 className
             )}
             onClick={onPlay}
+            title={isPlaying ? 'หยุดชั่วคราว' : 'เล่น'}
         >
             {/* Album Art */}
             <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded">
@@ -103,6 +104,7 @@ export function SongCard({
                         'text-[var(--color-spotify-light-gray)] hover:text-white',
                         'hover:bg-[var(--color-spotify-gray)] transition-all duration-200'
                     )}
+                    title="เพิ่มเข้าเพลย์ลิสต์"
                 >
                     <Plus className="h-5 w-5" />
                 </button>
