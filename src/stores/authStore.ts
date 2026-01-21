@@ -206,15 +206,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
 
     try {
+      // ใช้ maybeSingle() แทน single() เพื่อหลีกเลี่ยง 406 error เมื่อไม่พบข้อมูล
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      // PGRST116 = not found - create profile if it doesn't exist
-      if (error && error.code === 'PGRST116') {
-        // Auto-create profile for existing users
+      // ถ้าเกิด error (ไม่ใช่แค่ไม่พบข้อมูล)
+      if (error) {
+        console.error('Profile fetch error:', error);
+        return;
+      }
+
+      // ถ้าไม่พบ profile - สร้างใหม่
+      if (!data) {
         const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'ผู้ใช้';
         const username = user.email?.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || null;
         
@@ -226,7 +232,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             username: username,
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (createError) {
           console.error('Profile creation error:', createError);
@@ -239,14 +245,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      if (error) {
-        console.error('Profile fetch error:', error);
-        return;
-      }
-
-      if (data) {
-        set({ profile: data });
-      }
+      // พบ profile - set ลง state
+      set({ profile: data });
     } catch (error) {
       console.error('Profile fetch error:', error);
     }

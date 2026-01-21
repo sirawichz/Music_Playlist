@@ -53,11 +53,12 @@ export interface DbProfile {
  * ดึงข้อมูล Profile ของผู้ใช้
  */
 export async function getProfile(userId: string): Promise<DbProfile | null> {
+    // ใช้ maybeSingle() แทน single() เพื่อหลีกเลี่ยง 406 error
     const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error('Error fetching profile:', error);
@@ -74,12 +75,13 @@ export async function updateProfile(
     userId: string,
     updates: Partial<Pick<DbProfile, 'username' | 'display_name' | 'avatar_url'>>
 ): Promise<DbProfile | null> {
+    // ใช้ maybeSingle() แทน single() เพื่อหลีกเลี่ยง 406 error
     const { data, error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error('Error updating profile:', error);
@@ -96,6 +98,7 @@ export async function createProfile(
     userId: string,
     data: Pick<DbProfile, 'display_name'> & { username?: string }
 ): Promise<DbProfile | null> {
+    // ใช้ maybeSingle() แทน single() เพื่อความปลอดภัย
     const { data: profile, error } = await supabase
         .from('profiles')
         .insert({
@@ -104,7 +107,7 @@ export async function createProfile(
             username: data.username || null,
         })
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error('Error creating profile:', error);
