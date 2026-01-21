@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Plus, Search, Library, Heart, ListFilter, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Library, Heart, ListFilter, ArrowRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { usePlaylistStore } from '../../stores/playlistStore';
 import { useAuthStore } from '../../stores/authStore';
 import { CreatePlaylistModal } from '../ui/CreatePlaylistModal';
+import { EditPlaylistModal } from '../ui/EditPlaylistModal';
+import { DeleteConfirmModal } from '../ui/DeleteConfirmModal';
 import type { Playlist } from '../../types';
 
 interface SidebarProps {
@@ -11,9 +13,18 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) {
-    const { playlists, createPlaylist, isSyncing } = usePlaylistStore();
+    const { playlists, createPlaylist, updatePlaylist, deletePlaylist, fetchPlaylists, isSyncing } = usePlaylistStore();
     const { user, openAuthModal } = useAuthStore();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [selectedPlaylistForEdit, setSelectedPlaylistForEdit] = useState<Playlist | null>(null);
+    const [showMenuForPlaylist, setShowMenuForPlaylist] = useState<string | null>(null);
+
+    // Fetch playlists when component mounts or when user changes
+    useEffect(() => {
+        fetchPlaylists();
+    }, [user, fetchPlaylists]);
 
     const handleCreatePlaylistClick = () => {
         // ถ้ายังไม่ login ให้เปิด auth modal
@@ -28,6 +39,40 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
     const handleCreatePlaylist = async (name: string, description?: string) => {
         await createPlaylist(name, description);
         setIsCreateModalOpen(false);
+    };
+
+    const handleEditClick = (playlist: Playlist, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedPlaylistForEdit(playlist);
+        setIsEditModalOpen(true);
+        setShowMenuForPlaylist(null);
+    };
+
+    const handleDeleteClick = (playlist: Playlist, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedPlaylistForEdit(playlist);
+        setIsDeleteModalOpen(true);
+        setShowMenuForPlaylist(null);
+    };
+
+    const handleSaveEdit = async (name: string, description?: string) => {
+        if (selectedPlaylistForEdit) {
+            await updatePlaylist(selectedPlaylistForEdit.id, { name, description });
+            setIsEditModalOpen(false);
+            setSelectedPlaylistForEdit(null);
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (selectedPlaylistForEdit) {
+            await deletePlaylist(selectedPlaylistForEdit.id);
+            setIsDeleteModalOpen(false);
+            setSelectedPlaylistForEdit(null);
+            // ถ้า playlist ที่ลบคือ playlist ที่กำลังเลือกอยู่ ให้ clear selection
+            if (selectedPlaylistId === selectedPlaylistForEdit.id) {
+                onPlaylistSelect(playlists.find(p => p.id === 'playlist_liked')!);
+            }
+        }
     };
 
     return (
@@ -48,7 +93,10 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                         >
                             <Plus className="h-5 w-5" />
                         </button>
-                        <button className="rounded-full p-2 text-[var(--color-spotify-light-gray)] hover:text-white hover:bg-[var(--color-spotify-gray)] transition-all">
+                        <button 
+                            className="rounded-full p-2 text-[var(--color-spotify-light-gray)] hover:text-white hover:bg-[var(--color-spotify-gray)] transition-all"
+                            title="ขยายคอลเลกชัน"
+                        >
                             <ArrowRight className="h-5 w-5" />
                         </button>
                     </div>
@@ -66,10 +114,16 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
 
                 {/* Search and Sort */}
                 <div className="px-4 py-2 flex items-center justify-between">
-                    <button className="p-2 text-[var(--color-spotify-light-gray)] hover:text-white transition-colors">
+                    <button 
+                        className="p-2 text-[var(--color-spotify-light-gray)] hover:text-white transition-colors"
+                        title="ค้นหาในคอลเลกชัน"
+                    >
                         <Search className="h-4 w-4" />
                     </button>
-                    <button className="flex items-center gap-1 text-sm text-[var(--color-spotify-light-gray)] hover:text-white transition-colors">
+                    <button 
+                        className="flex items-center gap-1 text-sm text-[var(--color-spotify-light-gray)] hover:text-white transition-colors"
+                        title="เรียงลำดับ"
+                    >
                         <span>เล่นล่าสุด</span>
                         <ListFilter className="h-4 w-4" />
                     </button>
@@ -105,7 +159,7 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                         .map(playlist => (
                             <div
                                 key={playlist.id}
-                                className={`flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors ${selectedPlaylistId === playlist.id
+                                className={`group relative flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors ${selectedPlaylistId === playlist.id
                                     ? 'bg-[var(--color-spotify-gray)]'
                                     : 'hover:bg-[var(--color-spotify-gray)]'
                                     }`}
@@ -122,6 +176,45 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                                         เพลย์ลิสต์ • {playlist.songCount} เพลง
                                     </p>
                                 </div>
+
+                                {/* Menu Button */}
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowMenuForPlaylist(showMenuForPlaylist === playlist.id ? null : playlist.id);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 rounded-full p-2 text-[var(--color-spotify-light-gray)] hover:text-white hover:bg-[#3e3e3e] transition-all"
+                                    >
+                                        <MoreHorizontal className="h-5 w-5" />
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    {showMenuForPlaylist === playlist.id && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-[100]"
+                                                onClick={() => setShowMenuForPlaylist(null)}
+                                            />
+                                            <div className="absolute right-0 top-full mt-1 z-[101] w-48 rounded-md bg-[#282828] py-1 shadow-xl">
+                                                <button
+                                                    onClick={(e) => handleEditClick(playlist, e)}
+                                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-white hover:bg-[#3e3e3e] transition-colors"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    แก้ไขเพลย์ลิสต์
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDeleteClick(playlist, e)}
+                                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-[#3e3e3e] transition-colors"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    ลบเพลย์ลิสต์
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         ))}
                 </div>
@@ -132,6 +225,31 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onCreate={handleCreatePlaylist}
+                isLoading={isSyncing}
+            />
+
+            {/* Edit Playlist Modal */}
+            <EditPlaylistModal
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedPlaylistForEdit(null);
+                }}
+                onSave={handleSaveEdit}
+                playlistName={selectedPlaylistForEdit?.name || ''}
+                playlistDescription={selectedPlaylistForEdit?.description}
+                isLoading={isSyncing}
+            />
+
+            {/* Delete Confirm Modal */}
+            <DeleteConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => {
+                    setIsDeleteModalOpen(false);
+                    setSelectedPlaylistForEdit(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                playlistName={selectedPlaylistForEdit?.name || ''}
                 isLoading={isSyncing}
             />
         </aside>

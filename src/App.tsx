@@ -3,17 +3,19 @@ import { Bell, Settings, LogOut, User } from 'lucide-react';
 import { useMusicSearch } from './hooks/useMusicSearch';
 import { useAudioPlayerStore } from './stores/audioPlayerStore';
 import { useAuthStore } from './stores/authStore';
+import { usePlaylistStore } from './stores/playlistStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { NowPlayingPanel } from './components/layout/NowPlayingPanel';
 import { SearchBar } from './components/ui/SearchBar';
 import { SongCard } from './components/ui/SongCard';
 import { AudioPlayer } from './components/player/AudioPlayer';
 import { AuthModal } from './components/auth/AuthModal';
+import { AddToPlaylistModal } from './components/ui/AddToPlaylistModal';
 import type { Song, Playlist } from './types';
 
 function App() {
   const { query, results, isLoading, error, setQuery, clearResults } = useMusicSearch();
-  const { currentSong, isPlaying, setQueue, addToQueue } = useAudioPlayerStore();
+  const { currentSong, isPlaying, setQueue } = useAudioPlayerStore();
   const { 
     user, 
     profile, 
@@ -24,11 +26,46 @@ function App() {
   } = useAuthStore();
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] = useState(false);
+  const [songToAdd, setSongToAdd] = useState<Song | null>(null);
+  const [playlistSongs, setPlaylistSongs] = useState<Song[]>([]);
+  const [isLoadingPlaylist, setIsLoadingPlaylist] = useState(false);
+  
+  const { getPlaylistSongs } = usePlaylistStore();
 
   // Initialize auth on mount
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Load playlist songs when playlist is selected
+  useEffect(() => {
+    const loadPlaylistSongs = async () => {
+      if (selectedPlaylist && selectedPlaylist.id !== 'playlist_liked') {
+        setIsLoadingPlaylist(true);
+        try {
+          const playlistSongsData = await getPlaylistSongs(selectedPlaylist.id);
+          // Extract Song objects from PlaylistSong array and filter out undefined
+          const songs = playlistSongsData
+            .filter(ps => ps.song !== undefined)
+            .map(ps => ps.song as Song);
+          setPlaylistSongs(songs);
+        } catch (error) {
+          console.error('Error loading playlist songs:', error);
+          setPlaylistSongs([]);
+        } finally {
+          setIsLoadingPlaylist(false);
+        }
+      } else if (selectedPlaylist?.id === 'playlist_liked') {
+        // TODO: Load liked songs
+        setPlaylistSongs([]);
+      } else {
+        setPlaylistSongs([]);
+      }
+    };
+
+    loadPlaylistSongs();
+  }, [selectedPlaylist, getPlaylistSongs]);
 
   // Get user display info
   const userDisplayName = profile?.display_name || user?.email?.split('@')[0] || 'ผู้ใช้';
@@ -38,21 +75,23 @@ function App() {
     setQueue(songs, index);
   };
 
-  const handleAddToQueue = (song: Song) => {
+  const handleAddToPlaylist = (song: Song) => {
     // ถ้ายังไม่ login ให้เปิด auth modal
     if (!user) {
       openAuthModal('login');
       return;
     }
-    addToQueue(song);
+    setSongToAdd(song);
+    setIsAddToPlaylistModalOpen(true);
   };
 
   const handlePlaylistSelect = (playlist: Playlist) => {
     setSelectedPlaylist(playlist);
   };
 
-  // Show search results or home content
+  // Determine what to show in main content
   const showSearchResults = query.length > 0 || results.length > 0;
+  const showPlaylistView = !showSearchResults && selectedPlaylist !== null;
 
   return (
     <div className="flex h-screen flex-col bg-black">
@@ -92,10 +131,16 @@ function App() {
 
               {/* Icon Buttons Group */}
               <div className="flex items-center gap-1">
-                <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#a7a7a7] hover:text-white hover:scale-[1.04] active:scale-100 transition-all duration-200">
+                <button 
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[#a7a7a7] hover:text-white hover:scale-[1.04] active:scale-100 transition-all duration-200"
+                  title="การแจ้งเตือน"
+                >
                   <Bell className="h-4 w-4" />
                 </button>
-                <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#a7a7a7] hover:text-white hover:scale-[1.04] active:scale-100 transition-all duration-200">
+                <button 
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[#a7a7a7] hover:text-white hover:scale-[1.04] active:scale-100 transition-all duration-200"
+                  title="การตั้งค่า"
+                >
                   <Settings className="h-4 w-4" />
                 </button>
               </div>
@@ -192,7 +237,6 @@ function App() {
           {showSearchResults ? (
             /* Search Results */
             <div>
-
               {/* Error Message */}
               {error && (
                 <div className="mb-6 rounded-lg bg-red-500/20 p-4 text-red-400">
@@ -213,7 +257,7 @@ function App() {
                         song={song}
                         isPlaying={currentSong?.id === song.id && isPlaying}
                         onPlay={() => handlePlaySong(song, index, results)}
-                        onAddToPlaylist={() => handleAddToQueue(song)}
+                        onAddToPlaylist={() => handleAddToPlaylist(song)}
                       />
                     ))}
                   </div>
@@ -234,6 +278,57 @@ function App() {
                   <p className="text-xl text-white">ไม่พบผลลัพธ์</p>
                   <p className="text-[var(--color-spotify-light-gray)]">
                     ลองค้นหาเพลงหรือศิลปินอื่น
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : showPlaylistView ? (
+            /* Playlist View */
+            <div>
+              {/* Playlist Header */}
+              <div className="mb-6">
+                <h1 className="text-4xl font-bold text-white mb-2">
+                  {selectedPlaylist.name}
+                </h1>
+                {selectedPlaylist.description && (
+                  <p className="text-sm text-[var(--color-spotify-light-gray)]">
+                    {selectedPlaylist.description}
+                  </p>
+                )}
+                <p className="mt-2 text-sm text-[var(--color-spotify-light-gray)]">
+                  {selectedPlaylist.songCount} เพลง
+                </p>
+              </div>
+
+              {/* Loading Playlist */}
+              {isLoadingPlaylist && (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-spotify-gray)] border-t-[var(--color-spotify-green)]" />
+                  <p className="mt-4 text-[var(--color-spotify-light-gray)]">กำลังโหลดเพลง...</p>
+                </div>
+              )}
+
+              {/* Playlist Songs */}
+              {!isLoadingPlaylist && playlistSongs.length > 0 && (
+                <div className="rounded-lg bg-[var(--color-spotify-dark-gray)]/50 p-2">
+                  {playlistSongs.map((song, index) => (
+                    <SongCard
+                      key={song.id}
+                      song={song}
+                      isPlaying={currentSong?.id === song.id && isPlaying}
+                      onPlay={() => handlePlaySong(song, index, playlistSongs)}
+                      onAddToPlaylist={() => handleAddToPlaylist(song)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Empty Playlist */}
+              {!isLoadingPlaylist && playlistSongs.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <p className="text-xl text-white mb-2">ยังไม่มีเพลงในเพลย์ลิสต์</p>
+                  <p className="text-[var(--color-spotify-light-gray)]">
+                    ค้นหาและเพิ่มเพลงที่คุณชื่นชอบ
                   </p>
                 </div>
               )}
@@ -271,6 +366,13 @@ function App() {
 
       {/* Auth Modal */}
       <AuthModal />
+
+      {/* Add to Playlist Modal */}
+      <AddToPlaylistModal
+        isOpen={isAddToPlaylistModalOpen}
+        onClose={() => setIsAddToPlaylistModalOpen(false)}
+        song={songToAdd}
+      />
     </div>
   );
 }
