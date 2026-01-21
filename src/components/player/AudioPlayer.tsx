@@ -18,8 +18,6 @@ export function AudioPlayer() {
         duration,
         volume,
         isMuted,
-        play,
-        pause,
         togglePlay,
         nextSong,
         previousSong,
@@ -29,29 +27,41 @@ export function AudioPlayer() {
         toggleMute,
     } = useAudioPlayerStore();
 
-    // Handle audio element
+    // Handle audio source and playback
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
-        if (isPlaying && currentSong?.audioPreviewUrl) {
-            audio.play().catch(console.error);
+        // ถ้าไม่มีเพลงหรือไม่มี preview URL
+        if (!currentSong?.audioPreviewUrl) {
+            audio.pause();
+            return;
+        }
+
+        // เปลี่ยน source เมื่อเพลงเปลี่ยน
+        if (audio.src !== currentSong.audioPreviewUrl) {
+            audio.src = currentSong.audioPreviewUrl;
+            audio.load();
+        }
+
+        // Play หรือ Pause ตาม state
+        if (isPlaying) {
+            // ใช้ Promise และจัดการ AbortError
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((error) => {
+                    // Ignore AbortError - เกิดเมื่อเปลี่ยนเพลงระหว่าง play
+                    if (error.name === 'AbortError') {
+                        console.log('Play aborted - new song loading');
+                        return;
+                    }
+                    console.error('Playback error:', error);
+                });
+            }
         } else {
             audio.pause();
         }
-    }, [isPlaying, currentSong]);
-
-    // Update audio source when song changes
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio || !currentSong?.audioPreviewUrl) return;
-
-        audio.src = currentSong.audioPreviewUrl;
-        audio.load();
-        if (isPlaying) {
-            audio.play().catch(console.error);
-        }
-    }, [currentSong?.id]);
+    }, [isPlaying, currentSong?.id, currentSong?.audioPreviewUrl]);
 
     // Handle volume changes
     useEffect(() => {
