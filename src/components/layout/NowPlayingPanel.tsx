@@ -4,9 +4,10 @@ import type { Song } from '../../types';
 interface NowPlayingPanelProps {
     currentSong: Song | null;
     isPlaying: boolean;
+    onClose: () => void;
 }
 
-export function NowPlayingPanel({ currentSong, isPlaying }: NowPlayingPanelProps) {
+export function NowPlayingPanel({ currentSong, isPlaying, onClose }: NowPlayingPanelProps) {
     // Show empty state when no song is playing
     if (!currentSong) {
         return (
@@ -16,7 +17,11 @@ export function NowPlayingPanel({ currentSong, isPlaying }: NowPlayingPanelProps
                     <div className="flex items-center justify-between p-4">
                         <span className="text-sm font-bold text-white">กำลังเล่น</span>
                         <div className="flex items-center gap-1">
-                            <button className="text-[var(--color-spotify-light-gray)] hover:text-white transition-colors p-1">
+                            <button
+                                className="text-[var(--color-spotify-light-gray)] hover:text-white transition-colors p-1"
+                                onClick={onClose}
+                                title="ปิดเพลงที่กำลังเล่น"
+                            >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -49,7 +54,11 @@ export function NowPlayingPanel({ currentSong, isPlaying }: NowPlayingPanelProps
                         <button className="text-[var(--color-spotify-light-gray)] hover:text-white transition-colors p-1">
                             <MoreHorizontal className="h-5 w-5" />
                         </button>
-                        <button className="text-[var(--color-spotify-light-gray)] hover:text-white transition-colors p-1">
+                        <button
+                            className="text-[var(--color-spotify-light-gray)] hover:text-white transition-colors p-1"
+                            onClick={onClose}
+                            title="ปิดเพลงที่กำลังเล่น"
+                        >
                             <X className="h-5 w-5" />
                         </button>
                     </div>

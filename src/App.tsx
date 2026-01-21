@@ -15,7 +15,7 @@ import type { Song, Playlist } from './types';
 
 function App() {
   const { query, results, isLoading, error, setQuery, clearResults } = useMusicSearch();
-  const { currentSong, isPlaying, setQueue } = useAudioPlayerStore();
+  const { currentSong, isPlaying, setQueue, reset } = useAudioPlayerStore();
   const { 
     user, 
     profile, 
@@ -84,6 +84,10 @@ function App() {
 
   const handlePlaylistSelect = (playlist: Playlist) => {
     setSelectedPlaylist(playlist);
+  };
+
+  const handleCloseNowPlaying = () => {
+    reset(); // stop playback and clear current song/queue
   };
 
   // Determine what to show in main content
@@ -354,6 +358,7 @@ function App() {
           <NowPlayingPanel
             currentSong={currentSong}
             isPlaying={isPlaying}
+            onClose={handleCloseNowPlaying}
           />
         </div>
       </div>
