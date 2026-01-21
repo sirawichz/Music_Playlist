@@ -162,7 +162,10 @@ export async function saveSong(song: Omit<DbSong, 'id' | 'created_at'>): Promise
 export async function getUserPlaylists(userId: string): Promise<DbPlaylist[]> {
     const { data, error } = await supabase
         .from('playlists')
-        .select('*')
+        .select(`
+            *,
+            playlist_songs(count)
+        `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 

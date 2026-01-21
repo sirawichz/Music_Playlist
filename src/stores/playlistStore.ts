@@ -118,10 +118,14 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
             // Fetch playlists from database
             const dbPlaylists = await getUserPlaylists(user.id);
             
-            // Convert to Playlist format and count songs
+            // Convert to Playlist format with song count
             const playlists: Playlist[] = [
                 ...mockPlaylists, // Keep Liked Songs
-                ...dbPlaylists.map(db => dbPlaylistToPlaylist(db, 0)), // TODO: Count songs per playlist
+                ...dbPlaylists.map(db => {
+                    // Extract count from playlist_songs aggregate
+                    const songCount = (db as any).playlist_songs?.[0]?.count || 0;
+                    return dbPlaylistToPlaylist(db, songCount);
+                }),
             ];
 
             set({ playlists, isLoading: false });
