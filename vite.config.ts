@@ -21,4 +21,20 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // แยก Library ออกจากโค้ดที่เราเขียนเอง
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // แยก supabase และ framer-motion ออกเป็น chunk ต่างหาก
+            if (id.includes('@supabase') || id.includes('framer-motion')) {
+              return 'vendor_heavy';
+            }
+            return 'vendor'; // library อื่นๆ รวมกันใน vendor
+          }
+        },
+      },
+    },
+  },
 })
