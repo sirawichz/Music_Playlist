@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { Bell, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Settings, LogOut, User } from 'lucide-react';
 import { useMusicSearch } from './hooks/useMusicSearch';
 import { useAudioPlayerStore } from './stores/audioPlayerStore';
+import { useAuthStore } from './stores/authStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { NowPlayingPanel } from './components/layout/NowPlayingPanel';
 import { SearchBar } from './components/ui/SearchBar';
 import { SongCard } from './components/ui/SongCard';
 import { MusicCard } from './components/ui/MusicCard';
 import { AudioPlayer } from './components/player/AudioPlayer';
+import { AuthModal } from './components/auth/AuthModal';
 import { 
   mockRecentlyPlayed, 
   mockRadioStations, 
@@ -21,7 +23,25 @@ import type { Song, Playlist } from './types';
 function App() {
   const { query, results, isLoading, error, setQuery, clearResults } = useMusicSearch();
   const { currentSong, isPlaying, setQueue, addToQueue } = useAudioPlayerStore();
+  const { 
+    user, 
+    profile, 
+    isLoading: authLoading, 
+    initialize, 
+    openAuthModal, 
+    signOut 
+  } = useAuthStore();
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  // Get user display info
+  const userDisplayName = profile?.display_name || user?.email?.split('@')[0] || 'ผู้ใช้';
+  const userInitial = userDisplayName.charAt(0).toUpperCase();
 
   const handlePlaySong = (_song: Song, index: number, songs: Song[]) => {
     setQueue(songs, index);
@@ -41,7 +61,7 @@ function App() {
   return (
     <div className="flex h-screen flex-col bg-black">
       {/* Top Header - Full Width */}
-      <header className="flex items-center gap-6 px-6 py-[30px] bg-black overflow-hidden">
+      <header className="flex h-[100px] items-center gap-6 px-6 py-[30px] bg-black">
         {/* Spotify Logo */}
         <a href="#" className="flex items-center gap-2 flex-shrink-0">
           <svg className="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -61,7 +81,7 @@ function App() {
             {/* Right Actions */}
             <div className="flex flex-shrink-0 items-center gap-2">
               {/* Premium Button */}
-              <button className="h-8 rounded-[15px] bg-white px-6 text-sm font-bold text-black hover:scale-[1.04] hover:bg-[#f0f0f0] active:scale-100 active:bg-[#e0e0e0] transition-all duration-200">
+              <button className="h-[38px] rounded-[15px] bg-white px-[10px] py-[1px] text-sm font-bold text-black hover:scale-[1.04] hover:bg-[#f0f0f0] active:scale-100 active:bg-[#e0e0e0] transition-all duration-200">
                 สำรวจ Premium
               </button>
               
@@ -84,10 +104,63 @@ function App() {
                 </button>
               </div>
 
-              {/* User Avatar */}
-              <button className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6437] text-black font-bold text-sm hover:scale-[1.04] active:scale-100 transition-all duration-200 ml-1">
-                S
-              </button>
+              {/* User Avatar / Login */}
+              {user ? (
+                <div className="relative ml-1">
+                  <button 
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6437] text-black font-bold text-sm hover:scale-[1.04] active:scale-100 transition-all duration-200"
+                    title={userDisplayName}
+                  >
+                    {userInitial}
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {showUserMenu && (
+                    <>
+                      {/* Backdrop */}
+                      <div 
+                        className="fixed inset-0 z-[9998]" 
+                        onClick={() => setShowUserMenu(false)} 
+                      />
+                      {/* Menu */}
+                      <div className="absolute right-0 top-full mt-2 z-[9999] w-48 rounded-md bg-[#282828] py-1 shadow-xl">
+                        <div className="border-b border-[#3e3e3e] px-4 py-3">
+                          <p className="text-sm font-bold text-white truncate">{userDisplayName}</p>
+                          <p className="text-xs text-[#a7a7a7] truncate">{user.email}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[#a7a7a7] hover:bg-[#3e3e3e] hover:text-white"
+                        >
+                          <User className="h-4 w-4" />
+                          โปรไฟล์
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            signOut();
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[#a7a7a7] hover:bg-[#3e3e3e] hover:text-white"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          ออกจากระบบ
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <button 
+                  onClick={() => openAuthModal('login')}
+                  disabled={authLoading}
+                  className="flex h-8 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-black hover:scale-[1.04] hover:bg-[#f0f0f0] active:scale-100 transition-all duration-200 ml-1"
+                >
+                  เข้าสู่ระบบ
+                </button>
+              )}
             </div>
       </header>
 
@@ -411,6 +484,9 @@ function App() {
 
       {/* Bottom Audio Player */}
       <AudioPlayer />
+
+      {/* Auth Modal */}
+      <AuthModal />
     </div>
   );
 }
