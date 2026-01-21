@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Library, Heart, ListFilter, ArrowRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Library, ListFilter, ArrowRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { usePlaylistStore } from '../../stores/playlistStore';
 import { useAuthStore } from '../../stores/authStore';
 import { CreatePlaylistModal } from '../ui/CreatePlaylistModal';
@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) {
-    const { playlists, createPlaylist, updatePlaylist, deletePlaylist, fetchPlaylists, isSyncing } = usePlaylistStore();
+    const { playlists, createPlaylist, updatePlaylist, deletePlaylist, fetchPlaylists, isLoading, isSyncing } = usePlaylistStore();
     const { user, openAuthModal } = useAuthStore();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -131,32 +131,29 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
 
                 {/* Playlist List */}
                 <div className="flex-1 overflow-y-auto px-2 pb-2">
-                    {/* Liked Songs - Pinned */}
-                    <div
-                        className={`flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors ${selectedPlaylistId === 'playlist_liked'
-                            ? 'bg-[var(--color-spotify-gray)]'
-                            : 'hover:bg-[var(--color-spotify-gray)]'
-                            }`}
-                        onClick={() => onPlaylistSelect(playlists.find(p => p.id === 'playlist_liked')!)}
-                    >
-                        <div className="flex h-12 w-12 items-center justify-center rounded bg-gradient-to-br from-[#450af5] to-[#c4efd9]">
-                            <Heart className="h-5 w-5 text-white" fill="white" />
+                    {/* Loading State */}
+                    {isLoading ? (
+                        <div className="space-y-2">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={i} className="flex items-center gap-3 rounded-md p-2 animate-pulse">
+                                    <div className="h-12 w-12 rounded bg-[#3e3e3e]" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-4 w-3/4 rounded bg-[#3e3e3e]" />
+                                        <div className="h-3 w-1/2 rounded bg-[#3e3e3e]" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                                <p className="truncate font-medium text-white">เพลงที่ถูกใจ</p>
-                                <span className="text-[var(--color-spotify-green)]">📌</span>
+                    ) : playlists.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <div className="mb-4 rounded-full bg-[#3e3e3e] p-4">
+                                <Plus className="h-8 w-8 text-[#a7a7a7]" />
                             </div>
-                            <p className="truncate text-sm text-[var(--color-spotify-light-gray)]">
-                                เพลย์ลิสต์ • {playlists.find(p => p.id === 'playlist_liked')?.songCount || 5} เพลง
-                            </p>
+                            <p className="text-sm text-white mb-2">ยังไม่มีเพลย์ลิสต์</p>
+                            <p className="text-xs text-[#a7a7a7]">สร้างเพลย์ลิสต์แรกของคุณ</p>
                         </div>
-                    </div>
-
-                    {/* User Created Playlists */}
-                    {playlists
-                        .filter(p => p.id !== 'playlist_liked')
-                        .map(playlist => (
+                    ) : (
+                        playlists.map(playlist => (
                             <div
                                 key={playlist.id}
                                 className={`group relative flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors ${selectedPlaylistId === playlist.id
@@ -216,7 +213,8 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                                     )}
                                 </div>
                             </div>
-                        ))}
+                        ))
+                    )}
                 </div>
             </div>
 
