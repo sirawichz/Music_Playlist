@@ -1,10 +1,6 @@
 import debounce from 'lodash.debounce';
+import { musicApiEndpoints } from './apiConfig';
 import type { Song, ITunesSearchResponse, ITunesTrack } from '../types';
-
-// Use proxy in development to avoid CORS issues
-const ITUNES_API_BASE = import.meta.env.DEV 
-  ? '/api/itunes' 
-  : 'https://itunes.apple.com';
 
 /**
  * Maps iTunes API track to our Song type
@@ -46,7 +42,7 @@ export async function searchSongsFromItunes(
             limit: limit.toString(),
         });
 
-        const response = await fetch(`${ITUNES_API_BASE}/search?${params}`);
+        const response = await fetch(`${musicApiEndpoints.search}?${params}`);
 
         if (!response.ok) {
             throw new Error(`iTunes API error: ${response.status}`);
@@ -90,7 +86,7 @@ export async function getSongById(trackId: string): Promise<Song | null> {
             entity: 'song',
         });
 
-        const response = await fetch(`${ITUNES_API_BASE}/lookup?${params}`);
+        const response = await fetch(`${musicApiEndpoints.lookup}?${params}`);
 
         if (!response.ok) {
             throw new Error(`iTunes API error: ${response.status}`);
