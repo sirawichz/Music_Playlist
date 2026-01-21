@@ -1,0 +1,21 @@
+/* SongCard specific styles */
+
+/* Hover card effect */
+.hover-card {
+  transition: all 0.3s ease;
+}
+
+.hover-card:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Animation for playing indicator */
+@keyframes playing {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+
+.playing-bar {
+  animation: playing 0.8s ease-in-out infinite;
+}

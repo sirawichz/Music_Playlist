@@ -2,6 +2,7 @@ import { Play, Pause, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn, formatDuration } from '../../lib/utils';
 import type { Song } from '../../types';
+import './SongCard.css';
 
 interface SongCardProps {
     song: Song;

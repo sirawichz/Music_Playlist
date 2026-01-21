@@ -1,100 +1,69 @@
 /**
  * Supabase Client Setup
- * Mock version - ใช้ระหว่างพัฒนาเมื่อยังไม่ได้ setup Supabase จริง
+ * เชื่อมต่อกับ Supabase จริง - รองรับ Auth, Database, Edge Functions
  */
 
-// Environment variables (จะใช้จริงเมื่อ setup Supabase)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://mock.supabase.co';
-const _SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'mock_anon_key';
-
-// Check if we're using mock or real Supabase
-export const isMockMode = !import.meta.env.VITE_SUPABASE_URL;
-
-/**
- * Mock Supabase Client
- * เมื่อ setup Supabase จริง ให้ uncomment และใช้ @supabase/supabase-js
- */
-
-/*
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../types/database';
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
-*/
+// Environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Placeholder export สำหรับ mock mode
-export const supabase = {
-    // Mock auth
+// Check if environment variables are set
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn(
+    '⚠️ Supabase credentials not found. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env file.'
+  );
+}
+
+// Create Supabase client
+export const supabase = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co',
+  SUPABASE_ANON_KEY || 'placeholder_key',
+  {
     auth: {
-        getUser: async () => ({ data: { user: null }, error: null }),
-        signInWithPassword: async () => ({ data: { user: null, session: null }, error: null }),
-        signOut: async () => ({ error: null }),
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
     },
+  }
+);
 
-    // Mock functions (Edge Functions)
-    functions: {
-        invoke: async (functionName: string) => {
-            console.log(`[Mock] Would call Edge Function: ${functionName}`);
-            if (functionName === 'get-spotify-token') {
-                return {
-                    data: {
-                        accessToken: 'mock_token_' + Date.now(),
-                        tokenType: 'Bearer',
-                        expiresIn: 3600,
-                    },
-                    error: null,
-                };
-            }
-            return { data: null, error: null };
-        },
-    },
-
-    // Mock database operations
-    from: (table: string) => ({
-        select: (_columns?: string) => ({
-            eq: () => ({
-                single: async () => ({ data: null, error: null }),
-                data: [],
-                error: null,
-            }),
-            order: () => ({
-                limit: () => ({
-                    data: [],
-                    error: null,
-                }),
-            }),
-            data: [],
-            error: null,
-        }),
-        insert: (data: unknown) => ({
-            select: () => ({
-                single: async () => {
-                    console.log(`[Mock] Insert into ${table}:`, data);
-                    return { data, error: null };
-                },
-            }),
-        }),
-        update: (data: unknown) => ({
-            eq: () => ({
-                select: () => ({
-                    single: async () => {
-                        console.log(`[Mock] Update ${table}:`, data);
-                        return { data, error: null };
-                    },
-                }),
-            }),
-        }),
-        delete: () => ({
-            eq: async () => {
-                console.log(`[Mock] Delete from ${table}`);
-                return { error: null };
-            },
-        }),
-    }),
-};
+// Check if we're properly connected (has real credentials)
+export const isConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 // Export config for debugging
 export const supabaseConfig = {
-    url: SUPABASE_URL,
-    isMockMode,
+  url: SUPABASE_URL,
+  isConfigured,
 };
+
+/**
+ * ทดสอบการเชื่อมต่อ Database และแสดง log
+ */
+export async function testDatabaseConnection(): Promise<boolean> {
+  if (!isConfigured) {
+    console.log('❌ Database Connection: ไม่ได้ตั้งค่า Supabase credentials');
+    return false;
+  }
+
+  try {
+    // ทดสอบการเชื่อมต่อโดยดึงข้อมูลจาก auth
+    const { error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.log('❌ Database Connection Failed:', error.message);
+      return false;
+    }
+
+    console.log('✅ Database Connection: เชื่อมต่อ Supabase สำเร็จ!');
+    console.log('📍 URL:', SUPABASE_URL);
+    return true;
+  } catch (err) {
+    console.log('❌ Database Connection Error:', err);
+    return false;
+  }
+}
+
+// ทดสอบการเชื่อมต่อเมื่อโหลดแอพ
+testDatabaseConnection();

@@ -32,7 +32,7 @@ export function SearchBar({
             {/* Search form - Flexbox layout like Spotify */}
             <form 
                 role="search" 
-                className="flex-1 max-w-[480px] flex items-center bg-[#242424] rounded-full hover:bg-[#2a2a2a] transition-all duration-200 focus-within:ring-2 focus-within:ring-white focus-within:bg-[#2a2a2a]"
+                className="flex-1 max-w-[480px] flex items-center bg-[#242424] rounded-full hover:bg-[#2a2a2a] transition-all duration-200 focus-within:ring-2 focus-within:ring-white focus-within:bg-[#2a2a2a] mx-[25px] my-[20px]"
                 onSubmit={(e) => e.preventDefault()}
             >
                 {/* Leading - Search icon button */}
@@ -48,7 +48,7 @@ export function SearchBar({
                 </button>
                 
                 {/* Input container - flex-1 to take remaining space */}
-                <div className="flex-1 relative flex items-center">
+                <div className="flex-1 relative flex items-center p-[5px]">
                     <input
                         type="search"
                         role="combobox"
