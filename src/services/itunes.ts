@@ -1,7 +1,10 @@
 import debounce from 'lodash.debounce';
 import type { Song, ITunesSearchResponse, ITunesTrack } from '../types';
 
-const ITUNES_API_BASE = 'https://itunes.apple.com';
+// Use proxy in development to avoid CORS issues
+const ITUNES_API_BASE = import.meta.env.DEV 
+  ? '/api/itunes' 
+  : 'https://itunes.apple.com';
 
 /**
  * Maps iTunes API track to our Song type

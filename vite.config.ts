@@ -12,4 +12,13 @@ export default defineConfig({
     }),
     tailwindcss(), // เพิ่ม Tailwind plugin
   ],
+  server: {
+    proxy: {
+      '/api/itunes': {
+        target: 'https://itunes.apple.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/itunes/, ''),
+      },
+    },
+  },
 })
