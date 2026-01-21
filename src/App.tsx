@@ -48,6 +48,11 @@ function App() {
   };
 
   const handleAddToQueue = (song: Song) => {
+    // ถ้ายังไม่ login ให้เปิด auth modal
+    if (!user) {
+      openAuthModal('login');
+      return;
+    }
     addToQueue(song);
   };
 
@@ -139,9 +144,11 @@ function App() {
                           โปรไฟล์
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             setShowUserMenu(false);
-                            signOut();
+                            await signOut();
+                            // เปิด modal login หลังออกจากระบบ
+                            openAuthModal('login');
                           }}
                           className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[#a7a7a7] hover:bg-[#3e3e3e] hover:text-white"
                         >

@@ -1,5 +1,6 @@
 import { Plus, Search, Library, Heart, ListFilter, ArrowRight } from 'lucide-react';
 import { usePlaylistStore } from '../../stores/playlistStore';
+import { useAuthStore } from '../../stores/authStore';
 import { mockSidebarItems } from '../../services/mockSpotify';
 import type { Playlist } from '../../types';
 
@@ -10,8 +11,14 @@ interface SidebarProps {
 
 export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) {
     const { playlists, createPlaylist } = usePlaylistStore();
+    const { user, openAuthModal } = useAuthStore();
 
     const handleCreatePlaylist = async () => {
+        // ถ้ายังไม่ login ให้เปิด auth modal
+        if (!user) {
+            openAuthModal('login');
+            return;
+        }
         const name = `My Playlist #${playlists.length + 1}`;
         await createPlaylist(name);
     };
