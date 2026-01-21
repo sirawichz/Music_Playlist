@@ -53,19 +53,8 @@ function dbSongToSong(db: DbSong): Song {
     };
 }
 
-// Initial mock playlists (Liked Songs - special playlist)
-const mockPlaylists: Playlist[] = [
-    {
-        id: 'playlist_liked',
-        name: 'Liked Songs',
-        description: 'Songs you\'ve liked',
-        coverImageUrl: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: 'mock_user',
-        songCount: 0,
-    },
-];
+// Initial mock playlists (empty - all playlists come from database)
+const mockPlaylists: Playlist[] = [];
 
 interface PlaylistState {
     // Data
@@ -110,7 +99,7 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
             // Get userId from authStore
             const { user } = useAuthStore.getState();
             if (!user) {
-                // ถ้ายังไม่ login ให้ใช้ mock playlists เท่านั้น
+                // ถ้ายังไม่ login ให้ใช้ mock playlists เท่านั้น (empty)
                 set({ playlists: mockPlaylists, isLoading: false });
                 return;
             }
@@ -119,14 +108,11 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
             const dbPlaylists = await getUserPlaylists(user.id);
             
             // Convert to Playlist format with song count
-            const playlists: Playlist[] = [
-                ...mockPlaylists, // Keep Liked Songs
-                ...dbPlaylists.map(db => {
-                    // Extract count from playlist_songs aggregate
-                    const songCount = (db as any).playlist_songs?.[0]?.count || 0;
-                    return dbPlaylistToPlaylist(db, songCount);
-                }),
-            ];
+            const playlists: Playlist[] = dbPlaylists.map(db => {
+                // Extract count from playlist_songs aggregate
+                const songCount = (db as any).playlist_songs?.[0]?.count || 0;
+                return dbPlaylistToPlaylist(db, songCount);
+            });
 
             set({ playlists, isLoading: false });
         } catch (error) {
@@ -465,8 +451,8 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
             return cachedSongs;
         }
 
-        // Skip for mock playlists
-        if (playlistId === 'playlist_liked' || playlistId.startsWith('playlist_temp_')) {
+        // Skip for temporary playlists
+        if (playlistId.startsWith('playlist_temp_')) {
             return [];
         }
 

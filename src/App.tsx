@@ -41,7 +41,7 @@ function App() {
   // Load playlist songs when playlist is selected
   useEffect(() => {
     const loadPlaylistSongs = async () => {
-      if (selectedPlaylist && selectedPlaylist.id !== 'playlist_liked') {
+      if (selectedPlaylist) {
         setIsLoadingPlaylist(true);
         try {
           const playlistSongsData = await getPlaylistSongs(selectedPlaylist.id);
@@ -56,9 +56,6 @@ function App() {
         } finally {
           setIsLoadingPlaylist(false);
         }
-      } else if (selectedPlaylist?.id === 'playlist_liked') {
-        // TODO: Load liked songs
-        setPlaylistSongs([]);
       } else {
         setPlaylistSongs([]);
       }
