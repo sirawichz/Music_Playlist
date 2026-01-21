@@ -74,6 +74,18 @@ npm run dev
 
 ```
 
+## ⚡ Build Optimizations
+
+- ใช้ `manualChunks` ใน `vite.config.ts` แยก vendor ออกเป็น chunk (`vendor` และ `vendor_heavy` สำหรับ `@supabase`, `framer-motion`) ทำให้ bundle หลักเล็กลงและ cache ได้ดีขึ้น
+
+## 🗄️ MySQL Compatibility
+
+- มีสคีมาสำหรับ MySQL ที่แปลงจาก Supabase พร้อมไฟล์ migration
+- ไฟล์ที่เกี่ยวข้อง:
+  - `supabase/schema_mysql.sql`
+  - `supabase/migrations/20260121000001_initial_schema_mysql.sql`
+  - `supabase/README_MYSQL.md` (คู่มือการใช้งานและข้อควรระวัง)
+
 ## 📊 Database Schema Summary
 
 ฐานข้อมูล PostgreSQL บน Supabase ประกอบด้วย:
