@@ -23,6 +23,7 @@ export interface DbPlaylist {
     name: string;
     description: string;
     cover_image_url: string | null;
+    is_public: boolean;
     created_at: string;
     updated_at: string;
     user_id: string;
@@ -130,7 +131,7 @@ export async function saveSong(song: Omit<DbSong, 'id' | 'created_at'>): Promise
         .from('songs')
         .select('*')
         .eq('itunes_track_id', song.itunes_track_id)
-        .single();
+        .maybeSingle();
 
     if (existing) {
         return existing;
@@ -141,7 +142,7 @@ export async function saveSong(song: Omit<DbSong, 'id' | 'created_at'>): Promise
         .from('songs')
         .insert(song)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error('Error saving song:', error);
@@ -200,6 +201,45 @@ export async function createPlaylist(
 }
 
 /**
+ * อัพเดท Playlist
+ */
+export async function updatePlaylist(
+    playlistId: string,
+    updates: Partial<Pick<DbPlaylist, 'name' | 'description' | 'cover_image_url' | 'is_public'>>
+): Promise<DbPlaylist | null> {
+    const { data, error } = await supabase
+        .from('playlists')
+        .update(updates)
+        .eq('id', playlistId)
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error updating playlist:', error);
+        return null;
+    }
+
+    return data;
+}
+
+/**
+ * ลบ Playlist
+ */
+export async function deletePlaylist(playlistId: string): Promise<boolean> {
+    const { error } = await supabase
+        .from('playlists')
+        .delete()
+        .eq('id', playlistId);
+
+    if (error) {
+        console.error('Error deleting playlist:', error);
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * เพิ่มเพลงเข้า Playlist
  */
 export async function addSongToPlaylist(
@@ -254,4 +294,30 @@ export async function removeSongFromPlaylist(
     }
 
     return true;
+}
+
+/**
+ * ดึงเพลงทั้งหมดใน Playlist (พร้อมข้อมูลเพลง)
+ * Returns array with playlist_song and song data
+ */
+export async function getPlaylistSongsWithDetails(playlistId: string): Promise<Array<DbPlaylistSong & { song: DbSong }>> {
+    const { data, error } = await supabase
+        .from('playlist_songs')
+        .select(`
+            *,
+            songs (*)
+        `)
+        .eq('playlist_id', playlistId)
+        .order('position', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching playlist songs:', error);
+        return [];
+    }
+
+    // Transform the response (Supabase returns songs as an object, not array)
+    return (data || []).map((item: any) => ({
+        ...item,
+        song: Array.isArray(item.songs) ? item.songs[0] : item.songs,
+    })).filter((item: any) => item.song) as Array<DbPlaylistSong & { song: DbSong }>;
 }

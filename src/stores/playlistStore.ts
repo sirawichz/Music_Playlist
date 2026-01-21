@@ -10,8 +10,50 @@
 
 import { create } from 'zustand';
 import type { Playlist, Song, PlaylistSong } from '../types';
+import { 
+    getUserPlaylists, 
+    createPlaylist as createPlaylistAPI,
+    updatePlaylist as updatePlaylistAPI,
+    deletePlaylist as deletePlaylistAPI,
+    addSongToPlaylist as addSongToPlaylistAPI,
+    removeSongFromPlaylist as removeSongFromPlaylistAPI,
+    getPlaylistSongsWithDetails,
+    saveSong,
+    type DbPlaylist,
+    type DbSong 
+} from '../services/supabase';
+import { useAuthStore } from './authStore';
 
-// Initial mock playlists
+// Helper function: Convert DbPlaylist to Playlist
+function dbPlaylistToPlaylist(db: DbPlaylist, songCount: number = 0): Playlist {
+    return {
+        id: db.id,
+        name: db.name,
+        description: db.description || '',
+        coverImageUrl: db.cover_image_url,
+        createdAt: db.created_at,
+        updatedAt: db.updated_at,
+        userId: db.user_id,
+        songCount,
+    };
+}
+
+// Helper function: Convert DbSong to Song
+function dbSongToSong(db: DbSong): Song {
+    return {
+        id: db.itunes_track_id, // Use iTunes track ID as Song.id
+        songTitle: db.song_title,
+        artistName: db.artist_name,
+        albumName: db.album_name || '',
+        albumArtUrl: db.album_art_url || '',
+        audioPreviewUrl: db.audio_preview_url,
+        durationMs: db.duration_ms,
+        releaseDate: db.release_date,
+        genre: db.genre || '',
+    };
+}
+
+// Initial mock playlists (Liked Songs - special playlist)
 const mockPlaylists: Playlist[] = [
     {
         id: 'playlist_liked',
@@ -65,51 +107,80 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
     fetchPlaylists: async () => {
         set({ isLoading: true, error: null });
         try {
-            // Mock delay - ในอนาคตจะเรียก API จริง
-            await new Promise(resolve => setTimeout(resolve, 300));
-            // In real app: const { data } = await supabase.from('playlists').select()
-            set({ playlists: get().playlists, isLoading: false });
+            // Get userId from authStore
+            const { user } = useAuthStore.getState();
+            if (!user) {
+                // ถ้ายังไม่ login ให้ใช้ mock playlists เท่านั้น
+                set({ playlists: mockPlaylists, isLoading: false });
+                return;
+            }
+
+            // Fetch playlists from database
+            const dbPlaylists = await getUserPlaylists(user.id);
+            
+            // Convert to Playlist format and count songs
+            const playlists: Playlist[] = [
+                ...mockPlaylists, // Keep Liked Songs
+                ...dbPlaylists.map(db => dbPlaylistToPlaylist(db, 0)), // TODO: Count songs per playlist
+            ];
+
+            set({ playlists, isLoading: false });
         } catch (error) {
-            set({ error: (error as Error).message, isLoading: false });
+            console.error('Error fetching playlists:', error);
+            set({ error: 'ไม่สามารถโหลดเพลย์ลิสต์ได้', isLoading: false });
         }
     },
 
     // Create new playlist - Optimistic Update
     createPlaylist: async (name: string, description = '') => {
-        const tempId = `playlist_${Date.now()}`;
-        const newPlaylist: Playlist = {
+        // Get userId from authStore
+        const { user } = useAuthStore.getState();
+        if (!user) {
+            throw new Error('ต้องเข้าสู่ระบบก่อนสร้างเพลย์ลิสต์');
+        }
+
+        const tempId = `playlist_temp_${Date.now()}`;
+        const tempPlaylist: Playlist = {
             id: tempId,
             name,
             description,
             coverImageUrl: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            userId: 'mock_user',
+            userId: user.id,
             songCount: 0,
         };
 
         // 1. Optimistic: อัพเดท UI ทันที
         set(state => ({
-            playlists: [...state.playlists, newPlaylist],
+            playlists: [...state.playlists, tempPlaylist],
             error: null,
         }));
 
         // 2. Sync with server in background
         set({ isSyncing: true });
         try {
-            // Mock API call - ในอนาคตจะเรียก API จริง
-            await new Promise(resolve => setTimeout(resolve, 200));
-            // In real app: const { data, error } = await supabase.from('playlists').insert({...}).select().single()
+            // Call API to create playlist
+            const dbPlaylist = await createPlaylistAPI(user.id, name, description);
             
-            // ถ้า API สำเร็จ อาจต้องอัพเดท id จาก server
-            // set(state => ({
-            //     playlists: state.playlists.map(p => p.id === tempId ? { ...p, id: data.id } : p),
-            // }));
+            if (!dbPlaylist) {
+                throw new Error('ไม่สามารถสร้างเพลย์ลิสต์ได้');
+            }
 
-            set({ isSyncing: false });
+            // Convert to Playlist format
+            const newPlaylist = dbPlaylistToPlaylist(dbPlaylist, 0);
+
+            // 3. Update with real ID from server
+            set(state => ({
+                playlists: state.playlists.map(p => 
+                    p.id === tempId ? newPlaylist : p
+                ),
+                isSyncing: false,
+            }));
+
             return newPlaylist;
         } catch (error) {
-            // 3. Rollback: ถ้า API ล้มเหลว ลบ playlist ที่เพิ่มไว้ออก
+            // 4. Rollback: ถ้า API ล้มเหลว ลบ playlist ที่เพิ่มไว้ออก
             set(state => ({
                 playlists: state.playlists.filter(p => p.id !== tempId),
                 error: 'ไม่สามารถสร้างเพลย์ลิสต์ได้ กรุณาลองใหม่',
@@ -121,6 +192,11 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
 
     // Update playlist - Optimistic Update
     updatePlaylist: async (id: string, updates: Partial<Playlist>) => {
+        // Skip update for mock playlists (like Liked Songs)
+        if (id === 'playlist_liked' || id.startsWith('playlist_temp_')) {
+            return;
+        }
+
         // เก็บ state เดิมสำหรับ rollback
         const previousPlaylists = get().playlists;
         const previousCurrentPlaylist = get().currentPlaylist;
@@ -141,9 +217,33 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
         // 2. Sync with server in background
         set({ isSyncing: true });
         try {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            // In real app: await supabase.from('playlists').update(updates).eq('id', id)
-            set({ isSyncing: false });
+            // Convert camelCase to snake_case for database
+            const dbUpdates: Partial<Pick<DbPlaylist, 'name' | 'description' | 'cover_image_url' | 'is_public'>> = {};
+            if (updates.name !== undefined) dbUpdates.name = updates.name;
+            if (updates.description !== undefined) dbUpdates.description = updates.description;
+            if (updates.coverImageUrl !== undefined) dbUpdates.cover_image_url = updates.coverImageUrl;
+            // Note: is_public is not in Playlist type yet, but can be added if needed
+
+            const dbPlaylist = await updatePlaylistAPI(id, dbUpdates);
+            
+            if (!dbPlaylist) {
+                throw new Error('ไม่สามารถอัพเดทเพลย์ลิสต์ได้');
+            }
+
+            // Update with server data
+            const updatedPlaylist = dbPlaylistToPlaylist(dbPlaylist, 
+                get().playlists.find(p => p.id === id)?.songCount || 0
+            );
+
+            set(state => ({
+                playlists: state.playlists.map(p =>
+                    p.id === id ? updatedPlaylist : p
+                ),
+                currentPlaylist: state.currentPlaylist?.id === id
+                    ? updatedPlaylist
+                    : state.currentPlaylist,
+                isSyncing: false,
+            }));
         } catch (error) {
             // 3. Rollback: ถ้า API ล้มเหลว คืนค่า state เดิม
             set({
@@ -157,6 +257,11 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
 
     // Delete playlist - Optimistic Update
     deletePlaylist: async (id: string) => {
+        // Skip delete for mock playlists (like Liked Songs)
+        if (id === 'playlist_liked' || id.startsWith('playlist_temp_')) {
+            return;
+        }
+
         // เก็บ state เดิมสำหรับ rollback
         const previousPlaylists = get().playlists;
         const previousCurrentPlaylist = get().currentPlaylist;
@@ -172,8 +277,13 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
         // 2. Sync with server in background
         set({ isSyncing: true });
         try {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            // In real app: await supabase.from('playlists').delete().eq('id', id)
+            // Call API to delete playlist
+            const success = await deletePlaylistAPI(id);
+            
+            if (!success) {
+                throw new Error('ไม่สามารถลบเพลย์ลิสต์ได้');
+            }
+
             set({ isSyncing: false });
         } catch (error) {
             // 3. Rollback: ถ้า API ล้มเหลว คืน playlist กลับมา
@@ -201,10 +311,11 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
             return;
         }
 
+        const tempPlaylistSongId = `ps_temp_${Date.now()}`;
         const newPlaylistSong: PlaylistSong = {
-            id: `ps_${Date.now()}`,
+            id: tempPlaylistSongId,
             playlistId,
-            songId: song.id,
+            songId: song.id, // iTunes track ID (temporary)
             addedAt: new Date().toISOString(),
             position: currentSongs.length,
             song,
@@ -232,13 +343,61 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
         // 2. Sync with server in background
         set({ isSyncing: true });
         try {
-            await new Promise(resolve => setTimeout(resolve, 150));
-            // In real app:
             // 1. บันทึกเพลงลง songs table (ถ้ายังไม่มี)
+            const dbSong = await saveSong({
+                itunes_track_id: song.id, // iTunes track ID
+                song_title: song.songTitle,
+                artist_name: song.artistName,
+                album_name: song.albumName,
+                album_art_url: song.albumArtUrl,
+                audio_preview_url: song.audioPreviewUrl,
+                duration_ms: song.durationMs,
+                release_date: song.releaseDate,
+                genre: song.genre,
+            });
+
+            if (!dbSong) {
+                throw new Error('ไม่สามารถบันทึกเพลงได้');
+            }
+
             // 2. เพิ่มความสัมพันธ์ลง playlist_songs table
-            set({ isSyncing: false });
+            const dbPlaylistSong = await addSongToPlaylistAPI(
+                playlistId,
+                dbSong.id, // Use database UUID, not iTunes track ID
+                currentSongs.length
+            );
+
+            if (!dbPlaylistSong) {
+                throw new Error('ไม่สามารถเพิ่มเพลงเข้าเพลย์ลิสต์ได้');
+            }
+
+            // 3. Update with real ID from server
+            const finalPlaylistSong: PlaylistSong = {
+                id: dbPlaylistSong.id,
+                playlistId: dbPlaylistSong.playlist_id,
+                songId: dbSong.id, // Update to database UUID
+                addedAt: dbPlaylistSong.added_at,
+                position: dbPlaylistSong.position,
+                song,
+            };
+
+            const finalMap = new Map(get().playlistSongs);
+            const finalSongs = (finalMap.get(playlistId) || []).map(ps =>
+                ps.id === tempPlaylistSongId ? finalPlaylistSong : ps
+            );
+            finalMap.set(playlistId, finalSongs);
+
+            set(state => ({
+                playlistSongs: finalMap,
+                playlists: state.playlists.map(p =>
+                    p.id === playlistId
+                        ? { ...p, songCount: finalSongs.length }
+                        : p
+                ),
+                isSyncing: false,
+            }));
         } catch (error) {
-            // 3. Rollback: ถ้า API ล้มเหลว คืนค่า state เดิม
+            // 4. Rollback: ถ้า API ล้มเหลว คืนค่า state เดิม
             set({
                 playlistSongs: previousPlaylistSongs,
                 playlists: previousPlaylists,
@@ -274,8 +433,14 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
         // 2. Sync with server in background
         set({ isSyncing: true });
         try {
-            await new Promise(resolve => setTimeout(resolve, 150));
-            // In real app: await supabase.from('playlist_songs').delete().eq('playlist_id', playlistId).eq('song_id', songId)
+            // Call API to remove song from playlist
+            // songId should be database UUID (not iTunes track ID)
+            const success = await removeSongFromPlaylistAPI(playlistId, songId);
+            
+            if (!success) {
+                throw new Error('ไม่สามารถลบเพลงออกจากเพลย์ลิสต์ได้');
+            }
+
             set({ isSyncing: false });
         } catch (error) {
             // 3. Rollback: ถ้า API ล้มเหลว คืนเพลงกลับมา
@@ -290,8 +455,41 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
 
     // Get songs in playlist
     getPlaylistSongs: async (playlistId: string) => {
-        const songs = get().playlistSongs.get(playlistId) || [];
-        return songs;
+        // Check cache first
+        const cachedSongs = get().playlistSongs.get(playlistId);
+        if (cachedSongs && cachedSongs.length > 0) {
+            return cachedSongs;
+        }
+
+        // Skip for mock playlists
+        if (playlistId === 'playlist_liked' || playlistId.startsWith('playlist_temp_')) {
+            return [];
+        }
+
+        try {
+            // Fetch from database
+            const dbPlaylistSongs = await getPlaylistSongsWithDetails(playlistId);
+            
+            // Convert to PlaylistSong format
+            const playlistSongs: PlaylistSong[] = dbPlaylistSongs.map((item) => ({
+                id: item.id,
+                playlistId: item.playlist_id,
+                songId: item.song.id, // Database UUID
+                addedAt: item.added_at,
+                position: item.position,
+                song: dbSongToSong(item.song),
+            }));
+
+            // Cache the results
+            const newMap = new Map(get().playlistSongs);
+            newMap.set(playlistId, playlistSongs);
+            set({ playlistSongs: newMap });
+
+            return playlistSongs;
+        } catch (error) {
+            console.error('Error fetching playlist songs:', error);
+            return [];
+        }
     },
 
     // Clear error

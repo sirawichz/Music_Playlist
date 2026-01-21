@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Plus, Search, Library, Heart, ListFilter, ArrowRight } from 'lucide-react';
 import { usePlaylistStore } from '../../stores/playlistStore';
 import { useAuthStore } from '../../stores/authStore';
-import { mockSidebarItems } from '../../services/mockSpotify';
+import { CreatePlaylistModal } from '../ui/CreatePlaylistModal';
 import type { Playlist } from '../../types';
 
 interface SidebarProps {
@@ -10,17 +11,23 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) {
-    const { playlists, createPlaylist } = usePlaylistStore();
+    const { playlists, createPlaylist, isSyncing } = usePlaylistStore();
     const { user, openAuthModal } = useAuthStore();
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-    const handleCreatePlaylist = async () => {
+    const handleCreatePlaylistClick = () => {
         // ถ้ายังไม่ login ให้เปิด auth modal
         if (!user) {
             openAuthModal('login');
             return;
         }
-        const name = `My Playlist #${playlists.length + 1}`;
-        await createPlaylist(name);
+        // เปิด modal สำหรับกรอกชื่อ playlist
+        setIsCreateModalOpen(true);
+    };
+
+    const handleCreatePlaylist = async (name: string, description?: string) => {
+        await createPlaylist(name, description);
+        setIsCreateModalOpen(false);
     };
 
     return (
@@ -35,7 +42,7 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                     </div>
                     <div className="flex items-center gap-1">
                         <button
-                            onClick={handleCreatePlaylist}
+                            onClick={handleCreatePlaylistClick}
                             className="rounded-full p-2 text-[var(--color-spotify-light-gray)] hover:text-white hover:bg-[var(--color-spotify-gray)] transition-all"
                             title="สร้างเพลย์ลิสต์"
                         >
@@ -92,29 +99,6 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                         </div>
                     </div>
 
-                    {/* Mock Sidebar Items (playlists & artists) */}
-                    {mockSidebarItems.map(item => (
-                        <div
-                            key={item.id}
-                            className="flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors hover:bg-[var(--color-spotify-gray)]"
-                        >
-                            <img
-                                src={item.imageUrl}
-                                alt={item.name}
-                                className={`h-12 w-12 object-cover ${item.type === 'artist' ? 'rounded-full' : 'rounded'}`}
-                            />
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-white">{item.name}</p>
-                                <p className="truncate text-sm text-[var(--color-spotify-light-gray)]">
-                                    {item.type === 'playlist' 
-                                        ? `เพลย์ลิสต์ • ${item.owner}`
-                                        : 'ศิลปิน'
-                                    }
-                                </p>
-                            </div>
-                        </div>
-                    ))}
-
                     {/* User Created Playlists */}
                     {playlists
                         .filter(p => p.id !== 'playlist_liked')
@@ -142,6 +126,14 @@ export function Sidebar({ onPlaylistSelect, selectedPlaylistId }: SidebarProps) 
                         ))}
                 </div>
             </div>
+
+            {/* Create Playlist Modal */}
+            <CreatePlaylistModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onCreate={handleCreatePlaylist}
+                isLoading={isSyncing}
+            />
         </aside>
     );
 }
