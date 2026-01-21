@@ -66,6 +66,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 > [!IMPORTANT]
 > **Spotify Credentials** (`CLIENT_ID`, `CLIENT_SECRET`) ถูกเก็บไว้ใน **Supabase Secrets** เพื่อความปลอดภัย ไม่ใช่ในไฟล์ `.env` ฝั่ง Client
+> ปัจจุบันยังไม่สามารถใช้ Spotify Credentials ได้ (ทาง Spotify ยังไม่อนุมัติ/อัพเดตให้ใช้งานจริง)
 
 ### 4. Running the App
 
