@@ -52,7 +52,7 @@ export function AudioPlayer() {
                 playPromise.catch((error) => {
                     // Ignore AbortError - เกิดเมื่อเปลี่ยนเพลงระหว่าง play
                     if (error.name === 'AbortError') {
-                        console.log('Play aborted - new song loading');
+
                         return;
                     }
                     console.error('Playback error:', error);

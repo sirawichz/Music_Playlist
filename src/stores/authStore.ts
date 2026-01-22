@@ -54,7 +54,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: Partial<Pick<Profile, 'username' | 'display_name' | 'avatar_url'>>) => Promise<void>;
-  
+
   // Modal controls
   openAuthModal: (mode?: 'login' | 'signup') => void;
   closeAuthModal: () => void;
@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       // Get current session
       const { data: { session }, error } = await supabase.auth.getSession();
-      
+
       if (error) throw error;
 
       if (session?.user) {
@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event);
+
         set({ user: session?.user ?? null, session });
 
         if (event === 'SIGNED_IN' && session?.user) {
@@ -134,9 +134,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // If email confirmation is required
       if (data.user && !data.session) {
-        set({ 
-          isLoading: false, 
-          successMessage: 'กรุณาตรวจสอบอีเมลเพื่อยืนยันการสมัคร' 
+        set({
+          isLoading: false,
+          successMessage: 'กรุณาตรวจสอบอีเมลเพื่อยืนยันการสมัคร'
         });
         return { error: null };
       }
@@ -223,7 +223,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!data) {
         const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'ผู้ใช้';
         const username = user.email?.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || null;
-        
+
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -282,10 +282,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   switchAuthMode: () => {
-    set((state) => ({ 
+    set((state) => ({
       authModalMode: state.authModalMode === 'login' ? 'signup' : 'login',
       error: null,
-      successMessage: null 
+      successMessage: null
     }));
   },
 

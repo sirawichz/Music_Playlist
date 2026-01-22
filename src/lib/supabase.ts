@@ -43,24 +43,23 @@ export const supabaseConfig = {
  */
 export async function testDatabaseConnection(): Promise<boolean> {
   if (!isConfigured) {
-    console.log('❌ Database Connection: ไม่ได้ตั้งค่า Supabase credentials');
+
     return false;
   }
 
   try {
     // ทดสอบการเชื่อมต่อโดยดึงข้อมูลจาก auth
     const { error } = await supabase.auth.getSession();
-    
+
     if (error) {
-      console.log('❌ Database Connection Failed:', error.message);
+
       return false;
     }
 
-    console.log('✅ Database Connection: เชื่อมต่อ Supabase สำเร็จ!');
-    console.log('📍 URL:', SUPABASE_URL);
+
     return true;
   } catch (err) {
-    console.log('❌ Database Connection Error:', err);
+
     return false;
   }
 }
