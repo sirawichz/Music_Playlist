@@ -1,131 +1,143 @@
+# Music Playlist App (Spotify-like Experience)
 
-# 🎵 Music Playlist App (Spotify-like Experience)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/sirawichz/Music_playlist)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-19-blue)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-7-purple)](https://vitejs.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-green)](https://supabase.com)
 
-แอปพลิเคชันสำหรับจัดการเพลย์ลิสต์เพลงที่ได้รับแรงบันดาลใจจาก Spotify พัฒนาขึ้นเพื่อเป็นส่วนหนึ่งของ Full-Stack Developer Assessment โดยเน้นความลื่นไหลของ UI และความปลอดภัยในการจัดการข้อมูลผ่านสถาปัตยกรรมสมัยใหม่
+> **A scalable, production-ready music playlist management system offering a premium "Spotify-like" user experience.**
 
-## 🌐 Live Demo
+---
 
-**🔗 [https://music-playlist-wheat.vercel.app/](https://music-playlist-wheat.vercel.app/)**
+## � Table of Contents
 
-ลองใช้งานแอปพลิเคชันได้ทันทีผ่านลิงก์ด้านบน
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Tools & Technologies](#-tools--technologies)
+- [System Architecture](#-system-architecture-how-things-work)
+- [Setup & Deployment](#-how-to-setup)
+  - [With Docker Compose](#with-docker-compose)
+  - [With Kubernetes (Helm)](#with-kubernetes-helm)
+- [Notes & References](#-notes--references)
 
-## 🚀 Tech Stack (2026 Standards)
+---
 
-โปรเจกต์นี้เลือกใช้เครื่องมือเวอร์ชันล่าสุดเพื่อให้มั่นใจในประสิทธิภาพและความสามารถในการบำรุงรักษา:
+## 🔭 Overview
 
-* **Frontend:** **React 19.2** พร้อมใช้งาน **React Compiler** เพื่อการ Optimize ประสิทธิภาพโดยอัตโนมัติ
-* **Build Tool:** **Vite 7.0** เพื่อการประมวลผลที่รวดเร็วสูงสุด
-* **Styling:** **Tailwind CSS v4** (Oxide Engine) สำหรับการทำ Dark Theme ที่ยืดหยุ่น
-* **State Management:** **Zustand 5** สำหรับจัดการสถานะเครื่องเล่นเพลงแบบ Global
-* **Backend & Database:** **Supabase** (PostgreSQL, Auth, Edge Functions)
-* **Data Sources:** **iTunes Search API** (สำหรับดึงข้อมูลเพลงและ Preview) และ **Spotify Web API** (สำหรับ Metadata เชิงลึก)
+In the modern web ecosystem, building a responsive and seamless media application requires a robust architecture that balances client-side performance with secure server-side operations. **Music Playlist App** solves the challenge of fragmented music discovery by integrating the **iTunes Search API** for rapid content retrieval with a **Supabase** backend for persistent user libraries.
+
+Reliability and User Experience are paramount. This system implements **Optimistic UI Updates** to ensure instant feedback during playlist operations and utilizes a **Secure Edge Proxy** pattern to handle external API credentials, mitigating security risks common in SPA architectures.
+
+---
 
 ## ✨ Key Features
 
-* **Smart Music Search:** ค้นหาเพลง ศิลปิน หรืออัลบั้มผ่าน iTunes API พร้อมระบบ **Debouncing** เพื่อป้องกันการยิง API เกินโควตา
-* **Playlist Management:** ระบบ CRUD เต็มรูปแบบ (สร้าง, เพิ่มเพลง, ลบเพลง) พร้อม **Optimistic Updates** เพื่อให้ UI ตอบสนองทันที
-* **Persistent Audio Player:** เครื่องเล่นเพลงด้านล่างที่เล่นต่อเนื่องแม้มีการเปลี่ยนหน้าภายในแอป
-* **Secure API Proxy:** ใช้ **Supabase Edge Functions** เป็นตัวกลางในการขอ Spotify Token เพื่อปกปิด Client Secret ไม่ให้หลุดไปฝั่ง Client
-* **Responsive Design:** รองรับการใช้งานทั้งบน Desktop และ Mobile ด้วยระบบ Grid ของ Tailwind v4
+- **⚡ Instant Search Engine**: Utilizing `lodash.debounce` to efficiently query the iTunes API without hitting rate limits, providing real-time search results and 30-second audio previews.
+- **🎧 Seamless Playback Controller**: A global state-managed player (powered by Zustand 5) that maintains playback continuity across route navigations/page changes.
+- **📂 Smart Library Management**: Full CRUD capabilities (Create, Read, Update, Delete) with Optimistic UI updates, ensuring a "native-app" responsiveness even on slower networks.
+- **🛡️ Secure Edge Gateway**: Sensitive operations and token exchanges are offloaded to Supabase Edge Functions, preventing Client Secret exposure.
 
-## 🛠️ Coding Standards
+---
 
-โปรเจกต์นี้ยึดถือมาตรฐานการเขียนโค้ดที่สะอาดและสื่อความหมาย:
+## 🛠 Tools & Technologies
 
-* **Naming Convention:** ใช้ `camelCase` สำหรับตัวแปรและฟังก์ชันทั้งหมด (เช่น `currentPlayingTrack`, `isPlaylistLoading`)
-* **Semantic Naming:** ตั้งชื่อตัวแปรให้สอดคล้องกับหน้าที่ เช่น `songThumbnailUrl` แทน `image` และ `activePlaylistId` แทน `id`
-* **Type Safety:** พัฒนาด้วย **TypeScript** เพื่อลดความผิดพลาดในการส่งข้อมูลระหว่าง Component
+| Category | Technologies |
+|----------|--------------|
+| **Core** | ![React](https://img.shields.io/badge/-React_19-61DAFB?logo=react&logoColor=white) ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/-Vite_7-646CFF?logo=vite&logoColor=white) |
+| **Styling** | ![Tailwind CSS](https://img.shields.io/badge/-Tailwind_CSS_4-06B6D4?logo=tailwindcss&logoColor=white) ![Framer Motion](https://img.shields.io/badge/-Framer_Motion-0055FF?logo=framer&logoColor=white) |
+| **State** | ![Zustand](https://img.shields.io/badge/-Zustand_5-orange?logo=redux&logoColor=white) |
+| **Backend** | ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?logo=supabase&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-336791?logo=postgresql&logoColor=white) |
+| **DevOps** | ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white) ![Kubernetes](https://img.shields.io/badge/-Kubernetes-326CE5?logo=kubernetes&logoColor=white) |
 
-## 📦 Getting Started
+---
 
-### 1. Prerequisites
+## 🏗 System Architecture (How things work)
 
-* Node.js (เวอร์ชัน 20 ขึ้นไป)
-* บัญชี Supabase สำหรับฐานข้อมูล
+The system follows a modern **Client-Serverless** architecture. The React frontend interacts directly with high-performance public APIs (iTunes) for read-only ephemeral data, while user-specific state flows through Supabase.
 
-### 2. Installation
-
-```bash
-# Clone โปรเจกต์
-git clone https://github.com/your-username/Music_Playlist.git
-cd Music_Playlist
-
-# ติดตั้ง Dependencies
-npm install
-
+```mermaid
+graph TD
+    User[End User] -->|Interacts| Client[React 19 Client]
+    Client -->|Search Query| iTunes[iTunes Search API]
+    Client -->|Auth & Data| Supabase[Supabase Platform]
+    Supabase -->|Persist| DB[(PostgreSQL)]
+    Supabase -->|Proxy| Edge[Edge Functions]
+    Edge -->|Secure Request| Spotify[Spotify Web API]
+    
+    subgraph Client Application
+    Zustand[State Management]
+    Router[React Router]
+    Components[UI Components]
+    end
+    
+    Client --- Zustand
 ```
 
-### 3. Environment Variables
+**Data Flow:**
+1. **Discovery**: User types in search bar -> **Debounced Request** (300ms) -> **iTunes API** -> Search Results Display.
+2. **Playback**: User clicks play -> **Audio Player Store** (Zustand) Update -> HTML5 Audio Element matches URL streaming.
+3. **Curation**: User adds song -> **Optimistic UI Update** (Immediate Feedback) -> **Supabase API Call** -> DB Persistence.
 
-สร้างไฟล์ `.env` และระบุค่าที่จำเป็น:
+---
 
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+## ⚙️ How to Setup
 
-> [!IMPORTANT]
-> **Spotify Credentials** (`CLIENT_ID`, `CLIENT_SECRET`) ถูกเก็บไว้ใน **Supabase Secrets** เพื่อความปลอดภัย ไม่ใช่ในไฟล์ `.env` ฝั่ง Client
-> ปัจจุบันยังไม่สามารถใช้ Spotify Credentials ได้ (ทาง Spotify ยังไม่อนุมัติ/อัพเดตให้ใช้งานจริง)
+### Prerequisites
+- Docker & Docker Compose
+- Node.js v20+ (for local development)
+- Supabase Project Credentials
 
-### 4. Running the App
+### With Docker Compose
 
-```bash
-npm run dev
+Easily spin up the frontend application in a containerized environment.
 
-```
+1. **Build and Run:**
+   ```bash
+   docker-compose up --build -d
+   ```
 
-## ⚡ Build Optimizations
+2. **Verify Deployment:**
+   Access the application at `http://localhost:5173`.
 
-- ใช้ `manualChunks` ใน `vite.config.ts` แยก vendor ออกเป็น chunk (`vendor` และ `vendor_heavy` สำหรับ `@supabase`, `framer-motion`) ทำให้ bundle หลักเล็กลงและ cache ได้ดีขึ้น
+3. **Cleanup:**
+   ```bash
+   docker-compose down --rmi local
+   ```
 
-## 🗄️ MySQL Compatibility
+### With Kubernetes (Helm)
 
-- มีสคีมาสำหรับ MySQL ที่แปลงจาก Supabase พร้อมไฟล์ migration
-- ไฟล์ที่เกี่ยวข้อง:
-  - `supabase/schema_mysql.sql`
-  - `supabase/migrations/20260121000001_initial_schema_mysql.sql`
-  - `supabase/README_MYSQL.md` (คู่มือการใช้งานและข้อควรระวัง)
+Deploy to a cluster using a standard Helm chart structure.
 
-## 📊 Database Schema Summary
+1. **Install Dependencies:**
+   ```bash
+   helm dependency update ./chart
+   ```
 
-ฐานข้อมูล PostgreSQL บน Supabase ประกอบด้วย:
+2. **Deploy Release:**
+   ```bash
+   helm install music-playlist ./chart \
+     --set service.type=LoadBalancer \
+     --set env.VITE_SUPABASE_URL=your_url \
+     --set env.VITE_SUPABASE_ANON_KEY=your_key
+   ```
 
-* `profiles`: ข้อมูลผู้ใช้
-* `songs`: ข้อมูลเพลงที่ถูกเพิ่มเข้าระบบ
-* `playlists`: ข้อมูลเพลย์ลิสต์
-* `playlist_songs`: ตารางเชื่อมโยงเพลงและเพลย์ลิสต์ (Many-to-Many)
+3. **Cleanup:**
+   ```bash
+   helm uninstall music-playlist
+   ```
 
-## 🎵 iTunes API Integration
+---
 
-แอปพลิเคชันใช้ **iTunes Search API** เป็นแหล่งข้อมูลหลักในการค้นหาเพลง โดยมีคุณสมบัติดังนี้:
+## 📝 Notes & References
 
-### ✨ คุณสมบัติหลัก
+- **Design Philosophy**: Based on "Glassmorphism" principles and Spotify's dark mode aesthetics for reduced eye strain and premium feel.
+- **Supabase Edge Functions**: Utilized for handling CORS and API secrets securely, adhering to the "Backend for Frontend" (BFF) pattern capabilities.
+- **Future Roadmap**:
+  - [ ] Implementation of full Spotify OAuth 2.0 flow.
+  - [ ] Collaborative playlists via Supabase Realtime subscriptions.
 
-* **Real-time Search:** ค้นหาเพลงแบบทันทีขณะพิมพ์ พร้อมระบบ Debouncing 300ms เพื่อป้องกันการเรียก API บ่อยเกินไป
-* **Preview Audio:** รองรับการเล่นเพลงตัวอย่าง 30 วินาทีจาก `previewUrl` ที่ได้จาก API
-* **High-Quality Artwork:** อัพสเกลรูปปกอัลบั้มจาก 100x100 เป็น 300x300 pixels เพื่อความคมชัด
-* **Error Handling:** จัดการข้อผิดพลาดและแสดงข้อความที่เข้าใจง่ายเมื่อ API ไม่สามารถใช้งานได้
-
-### 🔧 การทำงาน
-
-1. **Service Layer** (`src/services/itunes.ts`):
-   - ฟังก์ชัน `searchSongsFromItunes()` สำหรับค้นหาเพลง
-   - ฟังก์ชัน `debouncedSearch()` ที่มี Debounce 300ms เพื่อป้องกัน Rate Limit
-   - ฟังก์ชัน `getSongById()` สำหรับดึงข้อมูลเพลงจาก Track ID
-   - แปลงข้อมูลจาก iTunes API format เป็น Song type ที่ใช้ในแอป
-
-2. **Custom Hook** (`src/hooks/useMusicSearch.ts`):
-   - จัดการ State ของการค้นหา (loading, results, error)
-   - ใช้ Debounced Search เพื่อลดการเรียก API
-   - Cleanup เมื่อ Component ถูก Unmount
-
-3. **CORS Handling**:
-   - ในโหมด Development ใช้ Proxy (`/api/itunes`) เพื่อหลีกเลี่ยงปัญหา CORS
-   - ใน Production เรียกใช้ iTunes API โดยตรง
-
-### ⚠️ ข้อจำกัด
-
-* **Rate Limit:** iTunes API จำกัดการเรียกใช้งานประมาณ **20 ครั้งต่อนาทีต่อ IP**
-* **Debounce:** ใช้ Delay 300ms เพื่อให้ผู้ใช้พิมพ์เสร็จก่อนจึงค่อยเรียก API
-* **Preview Duration:** เพลงตัวอย่างมีระยะเวลา 30 วินาทีเท่านั้น
+**References:**
+- [React 19 Documentation](https://react.dev/)
+- [Supabase Architecture Guide](https://supabase.com/docs/guides/architecture)
+- [Vite High Performance Guide](https://vitejs.dev/guide/performance.html)
